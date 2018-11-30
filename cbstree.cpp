@@ -108,19 +108,32 @@ int     CBSTree<NodeType>::CountNodes(const CTreeNode<NodeType>  *nodePtr
 {
     if(nodePtr == NULL)
     {
-        numNodes = 0;
         return 0;
     }
-    else if(nodePtr->left==NULL && nodePtr->right == NULL)
+
+    numNodes++;
+
+    if(nodePtr->m_left == NULL && nodePtr->m_right == NULL)
     {
-        numNodes++;
-        currDepth++;
-        return 1;
+        return 0;
     }
     else
     {
-        numNodes = CountNodes(nodePtr->left, currDepth, &numNodes) + CountNodes(nodePtr->right, currDepth, &numNodes);
-        return currDepth;
+        currDepth++;
+
+        int left = CountNodes(nodePtr->m_left, currDepth, numNodes);
+        int right = CountNodes(nodePtr->m_right, currDepth, numNodes);
+
+        if(left > right)
+        {
+            left++;
+            return left;
+        }
+        else
+        {
+            right++;
+            return right;
+        }
     }
 
 }  // end of "CBSTree::CountNodes"
@@ -153,13 +166,12 @@ int     CBSTree<NodeType>::CountNodes(const CTreeNode<NodeType>  *nodePtr
 // ============================================================================
 
 template    <typename  NodeType>
-CTreeNode<NodeType>*  CBSTree<NodeType>::Delete(
-                                            const NodeType  &target
-                                            , CTreeNode<NodeType>  *nodePtr
-                                            , bool  &bItemDeleted)
+CTreeNode<NodeType>*  CBSTree<NodeType>::Delete(const NodeType  &target
+                                                , CTreeNode<NodeType>  *nodePtr
+                                                , bool  &bItemDeleted)
 {
-    CTreeNode child;
-    CTreeNode *temp;
+    CTreeNode<NodeType> child;
+    CTreeNode<NodeType> *temp;
     temp = NULL;
     child->m_right = temp;
     child->m_left = temp;
@@ -195,7 +207,7 @@ CTreeNode<NodeType>*  CBSTree<NodeType>::Delete(
             else
             {
                 child = nodePtr->m_left;
-            {
+            }
             delete nodePtr;
             bItemDeleted = true;
             return child;
@@ -206,8 +218,6 @@ CTreeNode<NodeType>*  CBSTree<NodeType>::Delete(
     bItemDeleted = false;
 
 }  // end of "CBSTree<NodeType>::Delete"
-
-
 
 // ==== CBSTree::DeleteItem ===================================================
 //
@@ -230,6 +240,7 @@ bool    CBSTree<NodeType>::DeleteItem(const NodeType  &target)
     bool bItemDeleted = false;
     Delete(target, m_root, &bItemDeleted);
     return bItemDeleted;
+
 }  // end of "CBSTree<NodeType>::DeleteItem"
 
 
@@ -252,20 +263,22 @@ bool    CBSTree<NodeType>::DeleteItem(const NodeType  &target)
 template    <typename  NodeType>
 void    CBSTree<NodeType>::DestroyNodes(CTreeNode<NodeType>  *const nodePtr)
 {
-    CTreeNode *temp;
+    CTreeNode<NodeType> *temp;
     temp = nodePtr;
 
+    if(nodePtr == NULL)
+    {
+        return;
+    }
     if(temp->m_left == NULL && temp->m_right == NULL)
     {
         free(temp);
-        return NULL;
     }
     else
     {
-        temp->left = DestroyNodes(nodePtr->left);
-        temp->right = DestroyNodes(nodePtr->right);
+        DestroyNodes(nodePtr->m_left);
+        DestroyNodes(nodePtr->m_right);
     }
-    return nodePtr;
 
 }  // end of "CBSTree<ItemType>::DestroyNodes"
 
@@ -324,7 +337,8 @@ CTreeNode<NodeType>*  CBSTree<NodeType>::FindMinNode(
 template    <typename  NodeType>
 void    CBSTree<NodeType>::GetTreeInfo(int  &numNodes, int  &height) const
 {
-    ???
+    numNodes = 0;
+    height = CountNodes(m_root, -1, numNodes);
 
 }  // end of "CBSTree::GetTreeInfo"
 
@@ -354,7 +368,14 @@ template    <typename  NodeType>
 void    CBSTree<NodeType>::InOrder(const CTreeNode<NodeType> *const nodePtr
                                         , void (*fPtr)(const NodeType&)) const
 {
+    if(nodePtr == NULL)
+    {
+        return;
+    }
 
+    InOrder(nodePtr->m_left, fPtr);
+    (*fPtr)(nodePtr->m_value);
+    InOrder(nodePtr->m_right, fPtr);
 
 }  // end of "CBSTree<NodeType>::InOrder"
 
@@ -380,7 +401,7 @@ void    CBSTree<NodeType>::InOrder(const CTreeNode<NodeType> *const nodePtr
 template    <typename  NodeType>
 void    CBSTree<NodeType>::InOrderTraverse(void  (*fPtr)(const NodeType&)) const
 {
-    ???
+    InOrder(m_root, *fPtr);
 
 }  // end of "CBSTree<NodeType>::InOrderTraverse"
 
@@ -415,16 +436,24 @@ template    <typename  NodeType>
 CTreeNode<NodeType>*  CBSTree<NodeType>::Insert(const NodeType  &newItem
                                             , CTreeNode<NodeType>  *nodePtr)
 {
+    if(ItemInTree(newItem))
+    {
+        return NULL;
+    }
     if(nodePtr == NULL)
     {
-        nodePtr = new CTreeNode;
-        nodePtr->m_value = newItem;
+        nodePtr = new CTreeNode<NodeType>(newItem);
+
+        if(m_root == NULL)
+        {
+            m_root = nodePtr;
+        }
     }
     else
     {
         if(newItem < nodePtr->m_value)
         {
-            nodePtr->m_left = Insert(newItem, nodePtr->left);
+            nodePtr->m_left = Insert(newItem, nodePtr->m_left);
         }
         else if(newItem > nodePtr->m_value)
         {
@@ -453,7 +482,6 @@ CTreeNode<NodeType>*  CBSTree<NodeType>::Insert(const NodeType  &newItem
 //      false otherwise.
 //
 // ============================================================================
-
 template    <typename  NodeType>
 bool    CBSTree<NodeType>::InsertItem(const NodeType  &newItem)
 {
@@ -491,7 +519,14 @@ bool    CBSTree<NodeType>::InsertItem(const NodeType  &newItem)
 template    <typename  NodeType>
 bool    CBSTree<NodeType>::ItemInTree(const NodeType  &target) const
 {
-
+    if(NULL == Retrieve(target, m_root))
+    {
+        return false;
+    }
+    else
+    {
+        return true;
+    }
 
 }  // end of "CBSTree<NodeType>::ItemInTree"
 
@@ -521,11 +556,16 @@ template    <typename  NodeType>
 void    CBSTree<NodeType>::PostOrder(const CTreeNode<NodeType>  *const nodePtr
                                         , void (*fPtr)(const NodeType&)) const
 {
-    ???
+    if(nodePtr == NULL)
+    {
+        return;
+    }
+
+    PostOrder(nodePtr->m_left, fPtr);
+    PostOrder(nodePtr->m_right, fPtr);
+    (*fPtr)(nodePtr->m_value);
 
 }  // end of "CBSTree<NodeType>::PostOrder"
-
-
 
 // ==== CBSTree::PostOrderTraverse ============================================
 //
@@ -547,7 +587,7 @@ void    CBSTree<NodeType>::PostOrder(const CTreeNode<NodeType>  *const nodePtr
 template    <typename  NodeType>
 void    CBSTree<NodeType>::PostOrderTraverse(void  (*fPtr)(const NodeType&)) const
 {
-    ???
+    PostOrder(m_root, *fPtr);
 
 }  // end of "CBSTree<NodeType>::PostOrderTraverse"
 
@@ -577,7 +617,14 @@ template    <typename  NodeType>
 void    CBSTree<NodeType>::PreOrder(const CTreeNode<NodeType>  *const nodePtr
                                     , void  (*fPtr)(const NodeType&)) const
 {
-    ???
+    if(nodePtr == NULL)
+    {
+        return;
+    }
+
+    (*fPtr)(nodePtr->m_value);
+    PreOrder(nodePtr->m_left, fPtr);
+    PreOrder(nodePtr->m_right, fPtr);
 
 }  // end of "CBSTree<NodeType>::PreOrder"
 
@@ -603,11 +650,9 @@ void    CBSTree<NodeType>::PreOrder(const CTreeNode<NodeType>  *const nodePtr
 template    <typename  NodeType>
 void    CBSTree<NodeType>::PreOrderTraverse(void (*fPtr)(const NodeType&)) const
 {
-    ???
+    PreOrder(m_root, *fPtr);
 
 }  // end of "CBSTree<NodeType>::PreOrderTraverse"
-
-
 
 // ==== CBSTree::RebalanceTree ================================================
 //
@@ -631,7 +676,18 @@ void    CBSTree<NodeType>::PreOrderTraverse(void (*fPtr)(const NodeType&)) const
 template    <typename  NodeType>
 void        CBSTree<NodeType>::RebalanceTree()
 {
-    ???
+    int numNodes, height;
+    GetTreeInfo(numNodes, height);
+
+    int *array = new int[numNodes+2];
+
+    int index = 0;
+    SaveToArray(m_root, array, index);
+
+    DestroyTree();
+    Repopulate(array, 0, numNodes-1);
+
+    delete[] array;
 
 }  // end of "CBSTree<NodeType>::RebalanceTree"
 
@@ -663,7 +719,15 @@ template    <typename  NodeType>
 void        CBSTree<NodeType>::Repopulate(const NodeType array[], int first
                                                                 , int last)
 {
-    ???
+    if(first > last)
+    {
+        return;
+    }
+
+    int mid = (first+last)/2;
+    Insert(array[mid], m_root);
+    Repopulate(array, first, mid-1);
+    Repopulate(array, mid+1, last);
 
 }  // end of "CBSTree<NodeType>::Repopulate"
 
@@ -750,7 +814,15 @@ void    CBSTree<NodeType>::SaveToArray(const CTreeNode<NodeType> *const nodePtr
                                                             , NodeType array[]
                                                             , int &index)
 {
+    if(nodePtr == NULL)
+    {
+        return;
+    }
 
+    SaveToArray(nodePtr->m_left, array, index);
+    array[index] = nodePtr->m_value;
+    index++;
+    SaveToArray(nodePtr->m_right, array, index);
 
 }  // end of "CBSTree<NodeType>::SaveToArray"
 
@@ -784,3 +856,4 @@ CBSTree<NodeType>&  CBSTree<NodeType>::operator=(const CBSTree<NodeType> &rhs)
     return *this;
 
 }  // end of "CBSTree<NodeType>::operator="
+
